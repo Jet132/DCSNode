@@ -42,28 +42,35 @@ function insertValues(base, values, noDefault = false) {
  * @returns Error message if there is a problem
  */
 async function logUserPassing(userId, timestamp) {
-  let user = await UserModel.findOne({ id: userId });
-  if (process.env.CHECKPOINT_ID == 0) {
-    if (user) return;
-    new UserModel({
-      id: userId,
-      checkpoints: [timestamp]
-    }).save();
-    return;
-  }
+  try {
+    let user = await UserModel.findOne({ id: userId });
+    if (process.env.CHECKPOINT_ID == 0) {
+      if (user) return;
+      new UserModel({
+        id: userId,
+        checkpoints: [timestamp]
+      }).save();
+      return;
+    }
 
-  if (!user || !user.checkpoints[process.env.CHECKPOINT_ID - 1])
-    return 'You haven\'t even been at the last checkpoint';
-  let lastCheckpoint = user.checkpoints[process.env.CHECKPOINT_ID - 1];
-  if (lastCheckpoint + checkpointConfig.minTime > timestamp) {
-    return `You've reached this checkpoint too fast.\nTry again in ${lastCheckpoint + checkpointConfig.minTime - timestamp} milliseconds.`;
-  }
+    if (!user || !user.checkpoints[process.env.CHECKPOINT_ID - 1])
+      return 'You haven\'t even been at the last checkpoint.';
+    let lastCheckpoint = user.checkpoints[process.env.CHECKPOINT_ID - 1];
+    if (lastCheckpoint + checkpointConfig.minTime > timestamp) {
+      return `You've reached this checkpoint too fast.\nTry again in ${lastCheckpoint + checkpointConfig.minTime - timestamp} milliseconds.`;
+    }
 
-  if (user.checkpoints[process.env.CHECKPOINT_ID]) return;
-  user.checkpoints[process.env.CHECKPOINT_ID] = timestamp;
-  user.markModified('checkpoints');
-  user.save();
+    if (user.checkpoints[process.env.CHECKPOINT_ID]) return;
+    user.checkpoints[process.env.CHECKPOINT_ID] = timestamp;
+    user.markModified('checkpoints');
+    user.save();
+  } catch (err) {
+    console.error(err.stack);
+    return `Server was unable to verify validity of this passing.\n${defaultErrorMessage}`;
+  }
 }
+
+const defaultErrorMessage = 'Please contact the staff on the CodeBullet Discord server.';
 
 const content = {
   index: undefined,
@@ -99,8 +106,9 @@ app.get("/", asyncHandler(async (req, res, next) => {
   let user = undefined;
   try {
     user = await oauth.getUser(result.access_token);
-  } catch{
-    return next(new Error('The server was unable to retrieve the user info from Discord.'));
+  } catch (err) {
+    console.error(err.stack);
+    return next(new Error(`The server was unable to retrieve the user info from Discord.\n${defaultErrorMessage}`));
   }
 
   let potentialError = await logUserPassing(user.id, Date.now());
@@ -116,7 +124,7 @@ app.get("/", asyncHandler(async (req, res, next) => {
 }));
 app.use(function (err, req, res, next) {
   if (!err.message) console.error(err.stack);
-  res.send(insertValues(content.error, { REASON: err.message || 'Please contact the staff on the CodeBullet Discord server' }));
+  res.send(insertValues(content.error, { REASON: err.message || defaultErrorMessage }));
 });
 
 const CheckpointModel = mongoose.model('checkpoint', {
