@@ -42,7 +42,9 @@ function insertValues(base, values, noDefault = false) {
  * @returns Error message if there is a problem
  */
 async function logUserPassing(userId, timestamp) {
+  let user = await UserModel.findOne({ id: userId });
   if (process.env.CHECKPOINT_ID == 0) {
+    if (user) return;
     new UserModel({
       id: userId,
       checkpoints: [timestamp]
@@ -50,15 +52,14 @@ async function logUserPassing(userId, timestamp) {
     return;
   }
 
-  let user = await UserModel.findOne({ id: userId });
-
-  if (!user.checkpoints[process.env.CHECKPOINT_ID - 1])
+  if (!user || !user.checkpoints[process.env.CHECKPOINT_ID - 1])
     return 'You haven\'t even been at the last checkpoint';
   let lastCheckpoint = user.checkpoints[process.env.CHECKPOINT_ID - 1];
   if (lastCheckpoint + checkpointConfig.minTime > timestamp) {
     return `You've reached this checkpoint too fast.\nTry again in ${lastCheckpoint + checkpointConfig.minTime - timestamp} milliseconds.`;
   }
 
+  if (user.checkpoints[process.env.CHECKPOINT_ID]) return;
   user.checkpoints[process.env.CHECKPOINT_ID] = timestamp;
   user.markModified('checkpoints');
   user.save();
