@@ -5,10 +5,24 @@ const DiscordOauth2 = require("discord-oauth2");
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
+/**
+ * Reads a html view file and returns the content as a string
+ *
+ * @param {*} name Name of view
+ * @returns
+ */
 function readViewFile(name) {
   return fs.readFileSync(__dirname + `/views/${name}.html`).toString();
 }
 
+/**
+ * Inserts values into a string
+ *
+ * @param {*} base Base string
+ * @param {*} values Values ({ [name: string]: value })
+ * @param {boolean} [noDefault=false] If the default values should not be inserted
+ * @returns
+ */
 function insertValues(base, values, noDefault = false) {
   for (const [key, value] of Object.entries(values))
     base = base.split(`{{${key.toLocaleUpperCase()}}}`).join(value);
@@ -35,9 +49,7 @@ const oauth = new DiscordOauth2({
 let checkpointConfig = undefined;
 
 const app = express();
-
 app.use(express.static("public"));
-
 app.get("/", asyncHandler(async (req, res) => {
   if (!req.query.code)
     return res.send(content.index);
@@ -67,7 +79,6 @@ app.get("/", asyncHandler(async (req, res) => {
     USER_AVATAR: user.avatar
   }));
 }));
-
 app.use(function (err, req, res, next) {
   console.error(err.stack)
   res.status(500).send('Something broke!')
@@ -80,6 +91,10 @@ const checkpointConfigSchema = mongoose.model('config', {
   minTime: { required: false, type: Number }
 }, 'checkpoints');
 
+/**
+ * Main function to add async await support
+ *
+ */
 async function main() {
   await mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
   console.log('Successfully connected to MongoDB');
