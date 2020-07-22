@@ -1,30 +1,28 @@
-# hello-express
+# Discord Checkpoint System Node
 
-A server that serves a webpage, its resources, and some data
+A small server that represents a checkpoint.
 
+## Usage
 
-## Your Project
+First create a `.env` file in the project root
 
-On the front-end,
+```conf
+CLIENT_ID=[Discord client id]
+CLIENT_SECRET=[Discord client secret]
+CHECKPOINT_ID=[Checkpoint id]
+REDIRECT_URI=[Redirect uri (normally url to this checkpoint)]
+PORT=[Port to have to web server listen to]
+MONGO_URI=[Connection uri for MongoDB server]
+```
 
-- Edit `views/index.html` to change the content of the webpage
-- `public/client.js` is the javacript that runs when you load the webpage
-- `public/style.css` is the styles for `views/index.html`
-- Drag in `assets`, like images or music, to add them to your project
+Install all packages
 
-On the back-end,
+```shell
+npm install
+```
 
-- your app starts at `server.js`
-- add frameworks and packages in `package.json`
-- safely store app secrets in `.env` (nobody can see this but you and people you invite)
+Run Server
 
-Click `Show` in the header to see your app live. Updates to your code will instantly deploy.
-
-
-## Made by [Glitch](https://glitch.com/)
-
-**Glitch** is the friendly community where you'll build the app of your dreams. Glitch lets you instantly create, remix, edit, and host an app, bot or site, and you can invite collaborators or helpers to simultaneously edit code with you.
-
-Find out more [about Glitch](https://glitch.com/about).
-
-( ᵔ ᴥ ᵔ )
+```shell
+npm start
+```
