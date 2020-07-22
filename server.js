@@ -34,6 +34,36 @@ function insertValues(base, values, noDefault = false) {
   return base;
 }
 
+/**
+ * Logs that a user has passed and also checks if the passing is valid
+ *
+ * @param {*} user Id of user that passed
+ * @param {*} timestamp When the user passed
+ * @returns Error message if there is a problem
+ */
+async function logUserPassing(userId, timestamp) {
+  if (process.env.CHECKPOINT_ID == 0) {
+    new UserModel({
+      id: userId,
+      checkpoints: [timestamp]
+    }).save();
+    return;
+  }
+
+  let user = await UserModel.findOne({ id: userId });
+
+  if (!user.checkpoints[process.env.CHECKPOINT_ID - 1])
+    return 'You haven\'t even been at the last checkpoint';
+  let lastCheckpoint = user.checkpoints[process.env.CHECKPOINT_ID - 1];
+  if (lastCheckpoint + checkpointConfig.minTime > timestamp) {
+    return `You've reached this checkpoint too fast.\nTry again in ${lastCheckpoint + checkpointConfig.minTime - timestamp} milliseconds.`;
+  }
+
+  user.checkpoints[process.env.CHECKPOINT_ID] = timestamp;
+  user.markModified('checkpoints');
+  user.save();
+}
+
 const content = {
   index: undefined,
   error: readViewFile('error'),
@@ -50,7 +80,7 @@ let checkpointConfig = undefined;
 
 const app = express();
 app.use(express.static("public"));
-app.get("/", asyncHandler(async (req, res) => {
+app.get("/", asyncHandler(async (req, res, next) => {
   if (!req.query.code)
     return res.send(content.index);
 
@@ -62,15 +92,19 @@ app.get("/", asyncHandler(async (req, res) => {
       scope: ['identify']
     });
   } catch{
-    return res.send(insertValues(content.error, { REASON: 'The access code seems to be incorrect.' }));
+    return next(new Error('The access code seems to be incorrect.'));
   }
 
   let user = undefined;
   try {
     user = await oauth.getUser(result.access_token);
   } catch{
-    return res.send(insertValues(content.error, { REASON: 'The server was unable to retrieve the user info from Discord.' }));
+    return next(new Error('The server was unable to retrieve the user info from Discord.'));
   }
+
+  let potentialError = await logUserPassing(user.id, Date.now());
+  if (potentialError)
+    throw new Error(potentialError);
 
   return res.send(insertValues(content.result, {
     USER_NAME: user.username,
@@ -80,16 +114,21 @@ app.get("/", asyncHandler(async (req, res) => {
   }));
 }));
 app.use(function (err, req, res, next) {
-  console.error(err.stack)
-  res.status(500).send('Something broke!')
-})
+  if (!err.message) console.error(err.stack);
+  res.send(insertValues(content.error, { REASON: err.message || 'Please contact the staff on the CodeBullet Discord server' }));
+});
 
-const checkpointConfigSchema = mongoose.model('config', {
+const CheckpointModel = mongoose.model('checkpoint', {
   id: Number,
   name: String,
   message: String,
   minTime: { required: false, type: Number }
 }, 'checkpoints');
+
+const UserModel = mongoose.model('user', {
+  id: String,
+  checkpoints: [Number]
+}, 'users');
 
 /**
  * Main function to add async await support
@@ -99,7 +138,7 @@ async function main() {
   await mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
   console.log('Successfully connected to MongoDB');
 
-  checkpointConfig = await checkpointConfigSchema.findOne({ id: process.env.CHECKPOINT_ID });
+  checkpointConfig = await CheckpointModel.findOne({ id: process.env.CHECKPOINT_ID });
   if (!checkpointConfig)
     throw new Error(`No config was found for checkpoint ${process.env.CHECKPOINT_ID}`);
 
