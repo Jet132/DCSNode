@@ -1,6 +1,8 @@
-<h1>{{CHECK_NAME}}</h1>
-<span>{{CHECK_MESSAGE}}</span>
-<a
-  href="https://discord.com/api/oauth2/authorize?client_id={{CLIENT_ID}}&redirect_uri={{REDIRECT_URI}}&response_type=code&scope=identify">
-  Login
-</a>
+<div class="card">
+  <div class="card-body">
+    <h4 class="card-title pb-3">Checkpoint {{CHECK_NAME}}</h4>
+    <p class="card-text pb-2">You will need to identify yourself by login into discord.</p>
+    <a href="https://discord.com/api/oauth2/authorize?client_id={{CLIENT_ID}}&redirect_uri={{REDIRECT_URI}}&response_type=code&scope=identify"
+      class="btn btn-primary">Discord Login</a>
+  </div>
+</div>
