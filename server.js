@@ -32,7 +32,8 @@ function insertValues(base, values, addDefault = true) {
   if (addDefault)
     return insertValues(base, {
       CHECK_NAME: checkpointConfig.name,
-      CHECK_MESSAGE: checkpointConfig.message
+      CHECK_MESSAGE: checkpointConfig.message,
+      CHECK_LINK: checkpointConfig.link
     }, false);
   return base;
 }
@@ -136,6 +137,7 @@ const CheckpointModel = mongoose.model('checkpoint', {
   id: Number,
   name: String,
   message: String,
+  link: { default: "#", type: String },
   minTime: { required: false, type: Number }
 }, 'checkpoints');
 
