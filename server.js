@@ -11,8 +11,11 @@ const mongoose = require('mongoose');
  * @param {*} name Name of view
  * @returns
  */
-function readViewFile(name) {
-  return fs.readFileSync(__dirname + `/views/${name}.html`).toString();
+function readViewFile(name, layoutView = false) {
+  let content = fs.readFileSync(__dirname + `/views/${name}.html`).toString()
+  if (!layoutView)
+    content = insertValues(layout, { CONTENT: content }, false);
+  return content;
 }
 
 /**
@@ -20,17 +23,17 @@ function readViewFile(name) {
  *
  * @param {*} base Base string
  * @param {*} values Values ({ [name: string]: value })
- * @param {boolean} [noDefault=false] If the default values should not be inserted
+ * @param {boolean} [addDefault=true] If the default values should be inserted
  * @returns
  */
-function insertValues(base, values, noDefault = false) {
+function insertValues(base, values, addDefault = true) {
   for (const [key, value] of Object.entries(values))
     base = base.split(`{{${key.toLocaleUpperCase()}}}`).join(value);
-  if (!noDefault)
+  if (addDefault)
     return insertValues(base, {
       CHECK_NAME: checkpointConfig.name,
       CHECK_MESSAGE: checkpointConfig.message
-    }, true);
+    }, false);
   return base;
 }
 
@@ -71,6 +74,8 @@ async function logUserPassing(userId, timestamp) {
 }
 
 const defaultErrorMessage = 'Please contact the staff on the CodeBullet Discord server.';
+
+const layout = readViewFile('layout', true);
 
 const content = {
   index: undefined,
